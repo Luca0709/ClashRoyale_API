@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Clash Royale Player Lookup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand fw-bold">Clash Royale API</span>
+    </div>
+</nav>
+
+<main class="container mt-5">
+    <div class="card shadow-lg p-4 search-box">
+        <h2 class="mb-3 text-center title-main">Spieler suchen</h2>
+
+        <input id="tagInput"
+               class="form-control mb-3"
+               placeholder="#PLAYER_TAG">
+
+        <button class="btn btn-primary w-100" onclick="loadPlayer()">
+            Spieler laden
+        </button>
+
+        <pre id="output" class="mt-4"></pre>
+    </div>
+
+    
+    <div class="row g-4 mt-4" id="playerBoxes">
+
+    <div class="col-md-6">
+        <div class="card info-box">
+        <h5>Spieler</h5>
+        <div id="playerInfo"></div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card info-box">
+        <h5>Progress</h5>
+        <div id="progressInfo"></div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card info-box">
+        <h5>Battle Stats</h5>
+        <div id="battleStats"></div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card info-box">
+        <h5>Sonstiges</h5>
+        <div id="extraInfo"></div>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+      <h5>Raw Data</h5>
+      <pre id="rawData"></pre>
+    </div>
+
+    
+
+    <div class="col-12">
+    <div class="card info-box">
+      <h5>Letzte Battles</h5>
+      <div id="battleLog"></div>
+    </div>
+  </div>
+
+
+</main>
+
+<script>
+async function loadPlayer() {
+  const tag = document.getElementById("tagInput").value.replace("#","");
+  const res = await fetch(`/player/${tag}`);
+  const data = await res.json();
+
+  renderPlayerInfo(data);
+  renderProgress(data);
+  renderBattleStats(data);
+  renderExtra(data);
+  renderRaw(data);
+
+  const battles = await loadBattles(tag);
+  renderBattleLog(battles);
+
+}
+
+
+function renderPlayerInfo(p) {
+  document.getElementById("playerInfo").innerHTML = `
+    <p><strong>🤴Name:</strong> ${p.name}</p>
+    <p><strong>🎟Tag:</strong> ${p.tag}</p>
+    <p><strong>⭐️Level:</strong> ${p.expLevel}</p>
+    <p><strong>🏛️Clan:</strong> ${p.clan?.name ?? "Kein Clan"}</p>
+  `;
+}
+
+
+function renderProgress(p) {
+  document.getElementById("progressInfo").innerHTML = `
+    <p><strong> 🏆Trophäen:</strong> ${p.trophies}</p>
+    <p><strong>🎖Best:</strong> ${p.bestTrophies}</p>
+    <p><strong>🏰Arena:</strong> ${p.arena?.name}</p>
+  `;
+}
+
+
+function renderBattleStats(p) {
+  document.getElementById("battleStats").innerHTML = `
+    <p><strong>📈Wins:</strong> ${p.wins}</p>
+    <p><strong>📉Losses:</strong> ${p.losses}</p>
+    <p><strong>👑3-Crown Wins:</strong> ${p.threeCrownWins}</p>
+    <p><strong>Win-Percentage:</strong> ${(p.wins / p.battleCount *100).toFixed(2)}%</p>
+  `;
+}
+
+
+function renderExtra(p) {
+  document.getElementById("extraInfo").innerHTML = `
+    <p><strong>🔝Favorite Card:</strong> ${p.currentFavouriteCard?.name ?? "—"}</p>
+  `;
+}
+
+function renderRaw(data) {
+  const el = document.getElementById("rawData");
+
+  el.textContent = JSON.stringify(data, null, 2) || "not available";
+  
+}
+
+async function loadBattles(tag) {
+  const res = await fetch(`/player/${tag}/battles`);
+  return await res.json();
+}
+
+
+function renderBattleLog(battles) {
+  const container = document.getElementById("battleLog");
+  container.innerHTML = "";
+
+  battles.slice(0, 5).forEach(battle => {
+    const team = battle.team[0];
+    const opponent = battle.opponent[0];
+
+    const win =
+      team.crowns > opponent.crowns ? "✅ Sieg" :
+      team.crowns < opponent.crowns ? "❌ Niederlage" :
+      "➖ Draw";
+
+    container.innerHTML += `
+      <div class="battle-entry">
+        <strong>${win}</strong>
+        <div>${team.crowns} : ${opponent.crowns}</div>
+        <div>Arena: ${battle.arena?.name ?? "—"}</div>
+      </div>
+    `;
+  });
+}
+
+
+</script>
+
+</body>
+</html>
