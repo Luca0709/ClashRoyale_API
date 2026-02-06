@@ -153,20 +153,61 @@ function renderBattleLog(battles) {
     const team = battle.team[0];
     const opponent = battle.opponent[0];
 
-    const win =
-      team.crowns > opponent.crowns ? "✅ Sieg" :
-      team.crowns < opponent.crowns ? "❌ Niederlage" :
-      "➖ Draw";
+    const won = team.crowns > opponent.crowns;
+    const resultText = won ? "✅ Sieg" : "❌ Niederlage";
+
+    const renderDeck = (cards) =>
+      cards.map(card => `
+        <img 
+          src="${card.iconUrls?.medium}" 
+          alt="${card.name}" 
+          title="${card.name}"
+        />
+      `).join("");
 
     container.innerHTML += `
-      <div class="battle-entry">
-        <strong>${win}</strong>
-        <div>${team.crowns} : ${opponent.crowns}</div>
-        <div>Arena: ${battle.arena?.name ?? "—"}</div>
+      <div class="battle-box">
+        
+        <!-- LEFT: YOU -->
+        <div class="player">
+          <div class="player-header">
+            <strong>${team.name}</strong>
+            <span class="clan">${team.clan?.name ?? "—"}</span>
+          </div>
+
+          <div class="deck">
+            ${renderDeck(team.cards)}
+          </div>
+          <div> <p>Elixir Leaked: </p> ${team.elixirLeaked} <p>      🏆Trophies: ${team.trophyChange} </p> </div>
+        </div>
+
+        <!-- CENTER -->
+        <div class="battle-center">
+          <div class="score">${team.crowns} : ${opponent.crowns}</div>
+          <div class="result ${won ? "win" : "loss"}">
+            ${resultText}
+          </div>
+        </div>
+
+        <!-- RIGHT: OPPONENT -->
+        <div class="player">
+          <div class="player-header">
+            <strong>${opponent.name}</strong>
+            <span class="clan">${opponent.clan?.name ?? "—"}</span>
+          </div>
+
+          <div class="deck">
+            ${renderDeck(opponent.cards)}
+          </div>
+          <div> <p>Elixir Leaked: </p> ${opponent.elixirLeaked} <p>      🏆Trophies: ${opponent.trophyChange} </p> </div>
+
+        </div>
+
       </div>
     `;
   });
 }
+
 
 
 </script>

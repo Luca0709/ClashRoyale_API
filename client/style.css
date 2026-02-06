@@ -87,3 +87,58 @@ pre {
 }
 
 
+.battle-box {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #1e1e1e;
+  border-radius: 12px;
+  align-items: center;
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-header {
+  font-size: 14px;
+}
+
+.player-header .clan {
+  display: block;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.deck {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.deck img {
+  width: 100%;
+  border-radius: 6px;
+}
+
+.battle-center {
+  text-align: center;
+  min-width: 80px;
+}
+
+.score {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.result.win {
+  color: #4caf50;
+}
+
+.result.loss {
+  color: #f44336;
+}
