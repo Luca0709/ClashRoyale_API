@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Clash Royale Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="css/style.css">
+
+<script src="js/menu.js" defer></script>
+<script src="js/leaderboard.js" defer></script>
+
+</head>
+<body class="dark">
+
+<!-- Topbar -->
+<header class="topbar">
+  <button id="menuBtn">☰</button>
+  <h4 class="title">Clash Royale API</h4>
+  <label class="theme-switch">
+    <input type="checkbox" id="themeToggle">
+    <span>🌙</span>
+  </label>
+</header>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <a href="/">Spielersuche</a>
+  <a href="/leaderboards.html">Leaderboards</a>
+  <a href="/clans.html">Clansuche</a>
+  <a href="/decks.html">Decks</a>
+</aside>
+
+<!-- Main Content -->
+<main class="container">
+  <h2 class="title-main">🏆 Leaderboards *local soon*</h2>
+
+  <div class="card info-box">
+    <div class="leaderboard-header">
+      <div>Rank</div>
+      <div></div>
+      <div>Player</div>
+      <div></div>
+      <div>Medals</div>
+    </div>
+
+    <div id="leaderboardTable"></div>
+  </div>
+</main>
+
+</body>
+</html>
