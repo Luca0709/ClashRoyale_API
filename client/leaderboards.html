@@ -33,7 +33,22 @@
 
 <!-- Main Content -->
 <main class="container">
-  <h2 class="title-main">🏆 Leaderboards *local soon*</h2>
+  <div class="page-top">
+    <h2 class="title-main">🏆 Leaderboards</h2>
+
+    <div class="leaderboard-filter">
+      <button class="filter-btn" onclick="toggleLeaderboardDropdown()">
+        Region: <span id="selectedRegion">Global</span> ▼
+      </button>
+
+      <div class="dropdown-menu" id="leaderboardDropdown">
+        <button onclick="selectRegion('global')">Global</button>
+        <button onclick="selectRegion('österreich')">Österreich</button>
+        <button onclick="selectRegion('deutschland')">Deutschland</button>
+        <button onclick="selectRegion('amerika')">Amerika</button>
+      </div>
+    </div>
+  </div>
 
   <div class="card info-box">
     <div class="leaderboard-header">

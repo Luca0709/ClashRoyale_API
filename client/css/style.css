@@ -312,3 +312,120 @@ body.dark .title-main{
 
   margin-right: 10px; /* Abstand nach rechts zu den Medaillen */
 }
+
+
+/*CLANSEARCH CSS*/
+/* CLANSUCHE _______________________________________ */
+
+#clanResults {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.clan-row {
+  display: grid;
+  grid-template-columns: 72px 1.5fr repeat(4, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.clan-badge img,
+.clan-badge-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  font-size: 24px;
+}
+
+.clan-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clan-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.clan-tag {
+  font-size: 0.9rem;
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.clan-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clan-stat span {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.clan-stat strong {
+  font-size: 0.98rem;
+}
+
+.loading-box,
+.error-box,
+.empty-box {
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.loading-box {
+  background: rgba(250, 204, 21, 0.08);
+  color: var(--accent);
+}
+
+.error-box {
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+}
+
+.empty-box {
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .clan-row {
+    grid-template-columns: 72px 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .clan-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .clan-badge {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.clan-stat span {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  color: var(--text);
+}
