@@ -1,9 +1,59 @@
-<main class="container mt-5">
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Clash Royale Decks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<h2>Deck Builder</h2>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<p>Hier können später Meta Decks angezeigt werden.</p>
+  <script src="js/menu.js" defer></script>
+  <script src="js/decks.js" defer></script>
+</head>
+<body class="dark">
 
-<div id="deckContainer"></div>
+  <header class="topbar">
+    <button id="menuBtn">☰</button>
+    <h4 class="title">Clash Royale API</h4>
+    <label class="theme-switch">
+      <input type="checkbox" id="themeToggle">
+      <span>🌙</span>
+    </label>
+  </header>
 
-</main>
+  <aside id="sidebar">
+    <a href="/">Spielersuche</a>
+    <a href="/leaderboards.html">Leaderboards</a>
+    <a href="/clans.html">Clansuche</a>
+    <a href="/decks.html">Decks</a>
+  </aside>
+
+  <main class="container page-container">
+    <div class="page-top page-top-stack-mobile">
+      <div>
+        <h2 class="title-main">🃏 Oft gespielte Decks</h2>
+        <p class="page-subtitle">
+          Diese Ansicht nutzt bevorzugt Decks von Spielern aus der Ultimate-Champion-Rangliste.
+        </p>
+      </div>
+
+      <div class="leaderboard-filter deck-filter">
+        <button class="filter-btn" id="reloadDecksBtn">
+          Neu laden
+        </button>
+      </div>
+    </div>
+
+    <div class="card info-box mb-4 deck-info-card">
+      <div class="deck-stats" id="deckStats">
+        <div class="stat-chip">Lade Deck-Daten …</div>
+      </div>
+    </div>
+
+    <div id="deckError"></div>
+    <div id="deckContainer" class="deck-grid-layout"></div>
+  </main>
+
+</body>
+</html>
