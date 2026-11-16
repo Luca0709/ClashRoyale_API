@@ -1,180 +1,229 @@
 import express from "express";
-import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Lokal: Variablen aus .env laden (Node >= 20.12). Auf Render kommen sie aus dem Dashboard.
+try {
+  process.loadEnvFile();
+} catch {
+  // keine .env vorhanden – ist auf dem Server normal
+}
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const PORT = process.env.PORT || 8080;
+const API_KEY = process.env.CR_API_KEY;
+// Optional: z. B. "https://proxy.royaleapi.dev/v1" für lokale Entwicklung ohne fixe IP
+const API_BASE = process.env.CR_API_BASE || "https://api.clashroyale.com/v1";
+
+if (!API_KEY) {
+  console.warn("⚠️  CR_API_KEY ist nicht gesetzt – API-Anfragen werden fehlschlagen.");
+}
 
 const app = express();
-const PORT = 8080;
-
-app.use(cors());
-app.use(express.json());
 app.use(express.static(path.join(__dirname, "client")));
 
-const API_KEY ="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiIsImtpZCI6IjI4YTMxOGY3LTAwMDAtYTFlYi03ZmExLTJjNzQzM2M2Y2NhNSJ9.eyJpc3MiOiJzdXBlcmNlbGwiLCJhdWQiOiJzdXBlcmNlbGw6Z2FtZWFwaSIsImp0aSI6ImIwOWUxM2Q5LTA5MjQtNGVhNi05MDM5LTZkNmNjNDgxMWRlZCIsImlhdCI6MTc2OTk3MjkwNywic3ViIjoiZGV2ZWxvcGVyLzQ0ODJkYzU1LTk1ZTEtOTM5MC1hMmJlLTk3ZGVlZTc2ODE0ZSIsInNjb3BlcyI6WyJyb3lhbGUiXSwibGltaXRzIjpbeyJ0aWVyIjoiZGV2ZWxvcGVyL3NpbHZlciIsInR5cGUiOiJ0aHJvdHRsaW5nIn0seyJjaWRycyI6WyI3NC4yMjAuNTEuMjUwIl0sInR5cGUiOiJjbGllbnQifV19.chADcrwF4f5Owlh7HOckBIJ2Gt6BYQsqOSKm7TiXA_BgV5-nzkgxeGEb1g_MF-BDdZIQ9jYfmlkk3FPpXFfgQg";
 
+// ---------------------------------------------------------------------------
+// Hilfsfunktionen
+// ---------------------------------------------------------------------------
 
-app.get("/player/:tag", async (req, res) => {
-    try {
-        const tag = `%23${req.params.tag.replace("#", "")}`;
-        const response = await fetch(
-            `https://api.clashroyale.com/v1/players/${tag}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${API_KEY}`,
-                    Accept: "application/json"
-                }
-            }
-        );
+class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
 
-        if (!response.ok) {
-            return res.status(response.status).json(await response.json());
-        }
+const ERROR_MESSAGES = {
+  400: "Ungültige Anfrage an die Clash Royale API.",
+  403: "Zugriff verweigert – API-Key oder IP-Freigabe prüfen.",
+  404: "Nicht gefunden.",
+  429: "Zu viele Anfragen – bitte kurz warten.",
+  503: "Die Clash Royale API ist gerade in Wartung."
+};
 
-        res.json(await response.json());
-    } catch (err) {
-        res.status(500).json({ error: "Serverfehler" });
-    }
-});
+/** Ruft einen Endpunkt der offiziellen API auf und liefert das JSON zurück. */
+async function crFetch(endpoint) {
+  if (!API_KEY) {
+    throw new ApiError(500, "Der Server hat keinen API-Key konfiguriert.");
+  }
 
-
-///BAttle Logs eigener endpoint-->
-
-app.get("/player/:tag/battles", async (req, res) => {
+  let response;
   try {
-    const tag = `%23${req.params.tag.replace("#", "")}`;
-
-    const response = await fetch(
-      `https://api.clashroyale.com/v1/players/${tag}/battlelog`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          Accept: "application/json"
-        }
-      }
-    );
-
-    if (!response.ok) {
-      return res.status(response.status).json(await response.json());
-    }
-
-    res.json(await response.json());
+    response = await fetch(API_BASE + endpoint, {
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        Accept: "application/json"
+      },
+      signal: AbortSignal.timeout(10_000)
+    });
   } catch {
-    res.status(500).json({ error: "Battlelog Fehler" });
+    throw new ApiError(504, "Die Clash Royale API antwortet nicht.");
   }
+
+  if (!response.ok) {
+    const message = ERROR_MESSAGES[response.status] ?? `API-Fehler (${response.status}).`;
+    throw new ApiError(response.status, message);
+  }
+
+  return response.json();
+}
+
+/*
+ * Sehr einfacher In-Memory-Cache. Spart API-Aufrufe und macht die Seite
+ * auf dem Gratis-Server spürbar schneller.
+ */
+const cache = new Map();
+const CACHE_MAX_ENTRIES = 500;
+
+async function cached(key, ttlSeconds, loader) {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) {
+    return hit.value;
+  }
+
+  const value = await loader();
+
+  if (cache.size >= CACHE_MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value); // ältesten Eintrag entfernen
+  }
+  cache.set(key, { value, expires: Date.now() + ttlSeconds * 1000 });
+
+  return value;
+}
+
+/**
+ * Macht aus "#abc", "abc" oder "ABO" einen gültigen, URL-kodierten Tag.
+ * Clash-Royale-Tags bestehen nur aus 0289PYLQGRJCUV – ein "O" ist meist eine Null.
+ */
+function normalizeTag(rawTag, what = "Tag") {
+  const tag = String(rawTag ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/^#/, "")
+    .replace(/O/g, "0");
+
+  if (!/^[0289PYLQGRJCUV]{3,14}$/.test(tag)) {
+    throw new ApiError(400, `Ungültiger ${what}. Erlaubt sind nur 0289PYLQGRJCUV.`);
+  }
+
+  return encodeURIComponent(`#${tag}`);
+}
+
+/** Wrapper für Routen: liefert JSON oder eine saubere Fehlermeldung. */
+function route(handler) {
+  return async (req, res) => {
+    try {
+      res.json(await handler(req));
+    } catch (err) {
+      const status = err instanceof ApiError ? err.status : 500;
+      if (status >= 500) console.error(err);
+
+      res.status(status).json({
+        error: err instanceof ApiError ? err.message : "Interner Serverfehler."
+      });
+    }
+  };
+}
+
+/** Ersetzt eine generische 404-Meldung durch eine passende. */
+function notFoundAs(message) {
+  return (err) => {
+    if (err instanceof ApiError && err.status === 404) {
+      throw new ApiError(404, message);
+    }
+    throw err;
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// API-Routen
+// ---------------------------------------------------------------------------
+
+// Spielerprofil
+app.get("/api/player/:tag", route((req) => {
+  const tag = normalizeTag(req.params.tag, "Spieler-Tag");
+
+  return cached(`player:${tag}`, 60, () =>
+    crFetch(`/players/${tag}`).catch(notFoundAs("Spieler nicht gefunden."))
+  );
+}));
+
+// Battle-Log eines Spielers
+app.get("/api/player/:tag/battles", route((req) => {
+  const tag = normalizeTag(req.params.tag, "Spieler-Tag");
+
+  return cached(`battles:${tag}`, 60, () =>
+    crFetch(`/players/${tag}/battlelog`).catch(notFoundAs("Spieler nicht gefunden."))
+  );
+}));
+
+// Alle Länder (für Region-Auswahl bei Leaderboard und Clansuche)
+app.get("/api/locations", route(() =>
+  cached("locations", 24 * 60 * 60, async () => {
+    const data = await crFetch("/locations");
+
+    return data.items
+      .filter((loc) => loc.isCountry)
+      .map(({ id, name, countryCode }) => ({ id, name, countryCode }))
+      .sort((a, b) => a.name.localeCompare(b.name, "de"));
+  })
+));
+
+// Path-of-Legends-Rangliste (global oder pro Land)
+app.get("/api/leaderboard", route((req) => {
+  const region = String(req.query.region || "global").toLowerCase();
+
+  if (region !== "global" && !/^\d+$/.test(region)) {
+    throw new ApiError(400, "Ungültige Region.");
+  }
+
+  return cached(`leaderboard:${region}`, 5 * 60, async () => {
+    const data = await crFetch(`/locations/${region}/pathoflegend/players?limit=100`)
+      .catch(notFoundAs("Region nicht gefunden."));
+
+    return data.items.slice(0, 100);
+  });
+}));
+
+// Clansuche nach Name (optional mit Region)
+app.get("/api/clans", route((req) => {
+  const name = String(req.query.name ?? "").trim();
+  const locationId = String(req.query.locationId ?? "").trim();
+
+  if (name.length < 3) {
+    throw new ApiError(400, "Der Clanname muss mindestens 3 Zeichen lang sein.");
+  }
+  if (locationId && !/^\d+$/.test(locationId)) {
+    throw new ApiError(400, "Ungültige Region.");
+  }
+
+  const params = new URLSearchParams({ name, limit: "30" });
+  if (locationId) params.set("locationId", locationId);
+
+  return cached(`clans:${params}`, 2 * 60, async () => {
+    const data = await crFetch(`/clans?${params}`);
+    return data.items ?? [];
+  });
+}));
+
+// Clan-Details inkl. Mitgliederliste
+app.get("/api/clans/:tag", route((req) => {
+  const tag = normalizeTag(req.params.tag, "Clan-Tag");
+
+  return cached(`clan:${tag}`, 2 * 60, () =>
+    crFetch(`/clans/${tag}`).catch(notFoundAs("Clan nicht gefunden."))
+  );
+}));
+
+// Unbekannte API-Pfade
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "Unbekannter API-Endpunkt." });
 });
 
 
-// ENDPOINT LEADERBOARDS:
-app.get("/leaderboard", async (req, res) => {
-  try {
-    const region = (req.query.region || "global").toLowerCase();
-
-    const headers = {
-      Authorization: `Bearer ${API_KEY}`,
-      Accept: "application/json"
-    };
-
-    let url = "https://api.clashroyale.com/v1/locations/global/pathoflegend/players";
-
-    if (region !== "global") {
-      const regionMap = {
-        "österreich": "Austria",
-        "oesterreich": "Austria",
-        "austria": "Austria",
-        "deutschland": "Germany",
-        "germany": "Germany",
-        "amerika": "United States",
-        "usa": "United States",
-        "united states": "United States"
-      };
-
-      const apiRegionName = regionMap[region];
-
-      if (!apiRegionName) {
-        return res.status(400).json({ error: "Ungültige Region" });
-      }
-
-      // Alle Locations laden
-      const locationsResponse = await fetch(
-        "https://api.clashroyale.com/v1/locations",
-        { headers }
-      );
-
-      if (!locationsResponse.ok) {
-        return res.status(locationsResponse.status).json(await locationsResponse.json());
-      }
-
-      const locationsData = await locationsResponse.json();
-
-      const location = locationsData.items.find(
-        loc => loc.name?.toLowerCase() === apiRegionName.toLowerCase()
-      );
-
-      if (!location) {
-        return res.status(404).json({ error: `Region nicht gefunden: ${apiRegionName}` });
-      }
-
-      url = `https://api.clashroyale.com/v1/locations/${location.id}/pathoflegend/players`;
-    }
-
-    const response = await fetch(url, { headers });
-
-    if (!response.ok) {
-      return res.status(response.status).json(await response.json());
-    }
-
-    const data = await response.json();
-
-    res.json(data.items.slice(0, 100));
-  } catch (err) {
-    console.error("Leaderboard Fehler:", err);
-    res.status(500).json({ error: "Leaderboard Fehler" });
-  }
+app.listen(PORT, () => {
+  console.log(`✅ Server läuft auf http://localhost:${PORT}`);
 });
-
-
-// ENDPOINT CLANSUCHE:
-app.get("/clans", async (req, res) => {
-  try {
-    const name = req.query.name?.trim();
-
-    if (!name) {
-      return res.status(400).json({ error: "Clanname fehlt" });
-    }
-
-    const response = await fetch(
-      `https://api.clashroyale.com/v1/clans?name=${encodeURIComponent(name)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          Accept: "application/json"
-        }
-      }
-    );
-
-    if (!response.ok) {
-      return res.status(response.status).json(await response.json());
-    }
-
-    const data = await response.json();
-
-    res.json(data.items || []);
-  } catch (err) {
-    console.error("Clansuche Fehler:", err);
-    res.status(500).json({ error: "Clansuche Fehler" });
-  }
-});
-
-
-app.listen(PORT, () =>
-    console.log(`✅ http://localhost:${PORT}`)
-);
-
-
-
-//#9RQ8U9YQR
-
-

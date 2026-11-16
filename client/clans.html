@@ -2,56 +2,41 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Clansuche</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
+  <title>Clansuche · Clash Royale API</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
   <link rel="stylesheet" href="css/style.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <script src="js/menu.js" defer></script>
-  <script src="js/clans.js" defer></script>
+  <script src="js/theme-init.js"></script>
+  <script type="module" src="js/clans.js"></script>
 </head>
-<body class="dark">
+<body>
 
-  <!-- Topbar -->
-  <header class="topbar">
-    <button id="menuBtn">☰</button>
-    <h4 class="title">Clash Royale API</h4>
-    <label class="theme-switch">
-      <input type="checkbox" id="themeToggle">
-      <span>🌙</span>
-    </label>
-  </header>
+  <main class="container">
 
-  <!-- Sidebar -->
-  <aside id="sidebar">
-    <a href="/">Spielersuche</a>
-    <a href="/leaderboards.html">Leaderboards</a>
-    <a href="/clans.html">Clansuche</a>
-    <a href="/decks.html">Decks</a>
-  </aside>
+    <section class="card search-card">
+      <h1 class="page-title">Clans suchen</h1>
+      <p class="page-subtitle">Nach Clanname suchen (mind. 3 Zeichen) oder direkt einen #CLANTAG eingeben</p>
 
-  <!-- Main -->
-  <main class="container mt-5">
-    <div class="card p-4 search-box">
-      <h2 class="mb-3 text-center title-main">Clans suchen</h2>
+      <form id="clanForm" class="search-form search-form-wide">
+        <input id="clanInput" class="input" placeholder="Clanname oder #TAG" autocomplete="off" spellcheck="false">
+        <select id="regionSelect" class="input select" aria-label="Region">
+          <option value="">🌍 Alle Regionen</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Clan suchen</button>
+      </form>
+    </section>
 
-      <input
-        id="clanInput"
-        class="form-control mb-3"
-        placeholder="Clan Name eingeben"
-      >
+    <div id="clanStatus"></div>
+    <div id="clanResults" class="grid grid-auto"></div>
 
-      <button class="btn btn-primary w-100" onclick="loadClans()">
-        Clan suchen
-      </button>
-    </div>
-
-    <div class="card info-box mt-4">
-      <h5>Suchergebnisse</h5>
-      <div id="clanResults"></div>
-    </div>
   </main>
+
+  <dialog id="clanDialog" class="modal" aria-label="Clan-Details">
+    <div class="modal-inner">
+      <button class="icon-btn modal-close" id="closeClanDialog" type="button" aria-label="Schließen">✕</button>
+      <div id="clanDialogBody" class="modal-body"></div>
+    </div>
+  </dialog>
 
 </body>
 </html>

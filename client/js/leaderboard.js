@@ -1,96 +1,172 @@
-let currentRegion = "global";
+import "./layout.js";
+import { escapeHtml, fetchJson, cleanTag, formatNumber, statusBox, flagHtml } from "./utils.js";
 
-async function loadLeaderboard(region = "global") {
+const STORAGE_KEY = "leaderboardRegion";
+const GLOBAL = { id: "global", name: "Global", countryCode: null };
+
+const dropdown = document.getElementById("regionDropdown");
+const regionButton = document.getElementById("regionButton");
+const regionPanel = document.getElementById("regionPanel");
+const regionSearch = document.getElementById("regionSearch");
+const regionList = document.getElementById("regionList");
+const table = document.getElementById("leaderboardTable");
+const subtitle = document.getElementById("leaderboardSubtitle");
+
+let locations = null; // wird beim ersten Öffnen des Dropdowns geladen
+let selectedRegion = loadSavedRegion();
+let latestRequest = 0;
+
+
+// ---------------------------------------------------------------------------
+// Rangliste
+// ---------------------------------------------------------------------------
+
+async function loadLeaderboard() {
+  const requestId = ++latestRequest;
+  updateRegionButton();
+  table.innerHTML = statusBox("loading", "Rangliste wird geladen …");
+
   try {
-    currentRegion = region;
-
-    const res = await fetch(`/leaderboard?region=${encodeURIComponent(region)}`);
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Fehler beim Laden");
-    }
-
-    renderLeaderboard(data);
-    updateFilterLabel(region);
+    const players = await fetchJson(`/api/leaderboard?region=${encodeURIComponent(selectedRegion.id)}`);
+    if (requestId === latestRequest) renderLeaderboard(players);
   } catch (err) {
-    console.error(err);
-
-    const container = document.getElementById("leaderboardTable");
-    container.innerHTML = `<div class="error-box">Fehler: ${err.message}</div>`;
+    if (requestId === latestRequest) table.innerHTML = statusBox("error", err.message);
   }
 }
 
 function renderLeaderboard(players) {
-  const container = document.getElementById("leaderboardTable");
-  container.innerHTML = "";
+  if (!players.length) {
+    table.innerHTML = statusBox("empty", "Für diese Region gibt es keine Einträge.");
+    return;
+  }
 
-  players.forEach(p => {
-    const row = document.createElement("div");
-    row.className = "leaderboard-row";
+  table.innerHTML = players.map((p) => `
+    <a class="lb-row" href="/?tag=${encodeURIComponent(cleanTag(p.tag))}">
+      <span class="rank ${p.rank <= 3 ? `rank-${p.rank}` : ""}">${p.rank}</span>
+      <span class="lb-player">
+        <span class="lb-name">${escapeHtml(p.name)}</span>
+        <span class="lb-clan">${escapeHtml(p.clan?.name ?? "Kein Clan")}</span>
+      </span>
+      <span class="lb-level">${p.expLevel ?? "—"}</span>
+      <span class="lb-medals">🏅 ${formatNumber(p.eloRating)}</span>
+      <span class="btn btn-ghost btn-sm lb-action">Profil</span>
+    </a>
+  `).join("");
+}
 
-    row.innerHTML = `
-      <div class="rank">#${p.rank}</div>
 
-      <div class="flag">
-        ${
-          p.countryCode
-            ? `<img src="https://flagcdn.com/w40/${p.countryCode.toLowerCase()}.png" alt="${p.countryCode}">`
-            : ""
-        }
-      </div>
+// ---------------------------------------------------------------------------
+// Region-Dropdown
+// ---------------------------------------------------------------------------
 
-      <div class="player-cell">
-        <div class="player-name">${p.name}</div>
-        <div class="player-clan">${p.clan?.name ?? "—"}</div>
-      </div>
+function loadSavedRegion() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? GLOBAL;
+  } catch {
+    return GLOBAL;
+  }
+}
 
-      <button class="view-btn" onclick="openPlayer('${p.tag.replace("#", "")}')">
-        View
-      </button>
+function updateRegionButton() {
+  document.getElementById("regionIcon").innerHTML = flagHtml(selectedRegion.countryCode);
+  document.getElementById("regionName").textContent = selectedRegion.name;
+  subtitle.textContent = `Top 100 · Path of Legends · ${selectedRegion.name}`;
+}
 
-      <div class="medals">${p.eloRating ?? "—"}</div>
+async function openDropdown() {
+  regionPanel.hidden = false;
+  regionButton.setAttribute("aria-expanded", "true");
+  regionSearch.value = "";
+  regionSearch.focus();
+
+  if (!locations) {
+    regionList.innerHTML = `<li class="dropdown-info"><span class="spinner"></span>Regionen werden geladen …</li>`;
+    try {
+      locations = await fetchJson("/api/locations");
+    } catch (err) {
+      regionList.innerHTML = `<li class="dropdown-info text-danger">${escapeHtml(err.message)}</li>`;
+      return;
+    }
+  }
+
+  renderRegionOptions();
+}
+
+function closeDropdown() {
+  regionPanel.hidden = true;
+  regionButton.setAttribute("aria-expanded", "false");
+}
+
+function getFilteredRegions() {
+  const query = regionSearch.value.trim().toLowerCase();
+  return [GLOBAL, ...(locations ?? [])].filter((loc) => loc.name.toLowerCase().includes(query));
+}
+
+function renderRegionOptions() {
+  const regions = getFilteredRegions();
+
+  if (!regions.length) {
+    regionList.innerHTML = `<li class="dropdown-info">Keine Region gefunden.</li>`;
+    return;
+  }
+
+  regionList.innerHTML = regions.map((loc) => {
+    const selected = String(loc.id) === String(selectedRegion.id);
+    return `
+      <li>
+        <button type="button" class="dropdown-option ${selected ? "selected" : ""}"
+                data-id="${loc.id}" role="option" aria-selected="${selected}">
+          ${flagHtml(loc.countryCode)}<span>${escapeHtml(loc.name)}</span>
+        </button>
+      </li>
     `;
-
-    container.appendChild(row);
-  });
+  }).join("");
 }
 
-function openPlayer(tag) {
-  window.location.href = `/?tag=${tag}`;
+function selectRegion(id) {
+  const region = [GLOBAL, ...(locations ?? [])].find((loc) => String(loc.id) === String(id));
+  if (!region) return;
+
+  selectedRegion = region;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(region));
+  } catch {
+    // ohne localStorage wird die Auswahl eben nicht gemerkt
+  }
+
+  closeDropdown();
+  loadLeaderboard();
 }
 
-function toggleLeaderboardDropdown() {
-  const dropdown = document.getElementById("leaderboardDropdown");
-  dropdown.classList.toggle("show");
-}
 
-function selectRegion(region) {
-  const dropdown = document.getElementById("leaderboardDropdown");
-  dropdown.classList.remove("show");
-  loadLeaderboard(region);
-}
+// ---------------------------------------------------------------------------
+// Events & Start
+// ---------------------------------------------------------------------------
 
-function updateFilterLabel(region) {
-  const btnLabel = document.getElementById("selectedRegion");
+regionButton.addEventListener("click", () => {
+  regionPanel.hidden ? openDropdown() : closeDropdown();
+});
 
-  const labels = {
-    global: "Global",
-    "österreich": "Österreich",
-    deutschland: "Deutschland",
-    amerika: "Amerika"
-  };
+regionSearch.addEventListener("input", renderRegionOptions);
 
-  btnLabel.textContent = labels[region] || "Global";
-}
+regionSearch.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const first = getFilteredRegions()[0];
+    if (first) selectRegion(first.id);
+  }
+});
+
+regionList.addEventListener("click", (e) => {
+  const option = e.target.closest(".dropdown-option");
+  if (option) selectRegion(option.dataset.id);
+});
 
 document.addEventListener("click", (e) => {
-  const wrapper = document.querySelector(".leaderboard-filter");
-  const dropdown = document.getElementById("leaderboardDropdown");
+  if (!dropdown.contains(e.target)) closeDropdown();
+});
 
-  if (!wrapper.contains(e.target)) {
-    dropdown.classList.remove("show");
-  }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeDropdown();
 });
 
 loadLeaderboard();

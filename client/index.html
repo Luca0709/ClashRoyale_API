@@ -1,106 +1,73 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>Clash Royale API</title>
-
-<link rel="stylesheet" href="css/style.css">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<script src="js/menu.js" defer></script>
-<script src="js/theme.js" defer></script>
-<script src="js/app.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spielersuche · Clash Royale API</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme-init.js"></script>
+  <script type="module" src="js/app.js"></script>
 </head>
+<body>
 
-<body class="dark">
+  <main class="container">
 
-<!-- Navbar -->
+    <section class="card search-card">
+      <h1 class="page-title">Spieler suchen</h1>
+      <p class="page-subtitle">Spieler-Tag eingeben, z. B. aus dem Profil im Spiel</p>
 
-<header class="topbar">
+      <form id="playerForm" class="search-form">
+        <input id="tagInput" class="input" placeholder="#PLAYER_TAG" autocomplete="off" spellcheck="false">
+        <button class="btn btn-primary" type="submit">Spieler laden</button>
+      </form>
+    </section>
 
-<button id="menuBtn">☰</button>
+    <div id="playerStatus"></div>
 
-<h4 class="title">Clash Royale API</h4>
+    <div id="playerResult" class="stack" hidden>
 
-<label class="theme-switch">
-<input type="checkbox" id="themeToggle">
-<span>🌙</span>
-</label>
+      <section class="card hero" id="playerHero"></section>
 
-</header>
+      <div class="grid grid-3">
+        <section class="card">
+          <h2 class="card-title">📈 Fortschritt</h2>
+          <div id="progressInfo"></div>
+        </section>
 
-<!-- Sidebar -->
+        <section class="card">
+          <h2 class="card-title">⚔️ Battle-Statistik</h2>
+          <div id="battleStats"></div>
+        </section>
 
-<aside id="sidebar">
+        <section class="card">
+          <h2 class="card-title">✨ Sonstiges</h2>
+          <div id="extraInfo"></div>
+        </section>
+      </div>
 
-<a href="/">Spielersuche</a>
-<a href="/leaderboards.html">Leaderboards</a>
-<a href="/clans.html">Clansuche</a>
-<a href="/decks.html">Decks</a>
-
-</aside>
-
-<!-- Main -->
-
-<main class="container mt-5">
-
-<div class="card p-4 search-box">
-
-<h2 class="mb-3 text-center title-main">Spieler suchen</h2>
-
-<input id="tagInput" class="form-control mb-3" placeholder="#PLAYER_TAG">
-
-<button class="btn btn-primary w-100" onclick="loadPlayer()">
-Spieler laden
-</button>
-
-</div>
-
-<div class="row g-4 mt-4" id="playerBoxes">
-
-    <div class="col-md-6">
-        <div class="card info-box">
-        <h5>Spieler</h5>
-        <div id="playerInfo"></div>
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">🃏 Aktuelles Deck</h2>
+          <span class="muted" id="deckElixir"></span>
         </div>
+        <div id="currentDeck"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">🕑 Letzte Battles</h2>
+        <div id="battleLog" class="stack"></div>
+        <button class="btn btn-ghost btn-block" id="moreBattlesBtn" type="button" hidden>Mehr anzeigen</button>
+      </section>
+
+      <details class="card raw-data">
+        <summary>Rohdaten (JSON)</summary>
+        <pre id="rawData"></pre>
+      </details>
+
     </div>
 
-    <div class="col-md-6">
-        <div class="card info-box">
-        <h5>Progress</h5>
-        <div id="progressInfo"></div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card info-box">
-        <h5>Battle Stats</h5>
-        <div id="battleStats"></div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card info-box">
-        <h5>Sonstiges</h5>
-        <div id="extraInfo"></div>
-        </div>
-    </div>
-
-    <div class="container mt-5">
-      <h5>Raw Data</h5>
-      <pre id="rawData"></pre>
-    </div>
-
-    
-
-    <div class="col-12">
-    <div class="card info-box">
-      <h5>Letzte Battles</h5>
-      <div id="battleLog"></div>
-    </div>
-  </div>
-
-</main>
+  </main>
 
 </body>
 </html>

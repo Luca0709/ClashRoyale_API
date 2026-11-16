@@ -1,67 +1,52 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>Clash Royale Leaderboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<link rel="stylesheet" href="css/style.css">
-
-<script src="js/menu.js" defer></script>
-<script src="js/leaderboard.js" defer></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leaderboards · Clash Royale API</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme-init.js"></script>
+  <script type="module" src="js/leaderboard.js"></script>
 </head>
-<body class="dark">
+<body>
 
-<!-- Topbar -->
-<header class="topbar">
-  <button id="menuBtn">☰</button>
-  <h4 class="title">Clash Royale API</h4>
-  <label class="theme-switch">
-    <input type="checkbox" id="themeToggle">
-    <span>🌙</span>
-  </label>
-</header>
+  <main class="container">
 
-<!-- Sidebar -->
-<aside id="sidebar">
-  <a href="/">Spielersuche</a>
-  <a href="/leaderboards.html">Leaderboards</a>
-  <a href="/clans.html">Clansuche</a>
-  <a href="/decks.html">Decks</a>
-</aside>
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">🏆 Leaderboards</h1>
+        <p class="page-subtitle" id="leaderboardSubtitle">Top 100 · Path of Legends</p>
+      </div>
 
-<!-- Main Content -->
-<main class="container">
-  <div class="page-top">
-    <h2 class="title-main">🏆 Leaderboards</h2>
+      <div class="dropdown" id="regionDropdown">
+        <button class="select-btn" id="regionButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="select-btn-label">
+            <span id="regionIcon">🌍</span>
+            <span id="regionName">Global</span>
+          </span>
+          <span class="chevron">▾</span>
+        </button>
 
-    <div class="leaderboard-filter">
-      <button class="filter-btn" onclick="toggleLeaderboardDropdown()">
-        Region: <span id="selectedRegion">Global</span> ▼
-      </button>
-
-      <div class="dropdown-menu" id="leaderboardDropdown">
-        <button onclick="selectRegion('global')">Global</button>
-        <button onclick="selectRegion('österreich')">Österreich</button>
-        <button onclick="selectRegion('deutschland')">Deutschland</button>
-        <button onclick="selectRegion('amerika')">Amerika</button>
+        <div class="dropdown-panel" id="regionPanel" hidden>
+          <input class="input input-sm" id="regionSearch" placeholder="Land suchen …" autocomplete="off">
+          <ul class="dropdown-list" id="regionList" role="listbox"></ul>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="card info-box">
-    <div class="leaderboard-header">
-      <div>Rank</div>
-      <div></div>
-      <div>Player</div>
-      <div></div>
-      <div>Medals</div>
-    </div>
+    <section class="card card-flush">
+      <div class="lb-row lb-header">
+        <span>#</span>
+        <span>Spieler</span>
+        <span class="lb-level">Level</span>
+        <span class="lb-medals">Medaillen</span>
+        <span></span>
+      </div>
+      <div id="leaderboardTable"></div>
+    </section>
 
-    <div id="leaderboardTable"></div>
-  </div>
-</main>
+  </main>
 
 </body>
 </html>
