@@ -70,7 +70,7 @@ async function crFetch(endpoint) {
   return response.json();
 }
 
-/*
+/**
  * Sehr einfacher In-Memory-Cache. Spart API-Aufrufe und macht die Seite
  * auf dem Gratis-Server spürbar schneller.
  */
