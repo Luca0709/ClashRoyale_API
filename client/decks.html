@@ -7,21 +7,29 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
   <link rel="stylesheet" href="css/style.css">
   <script src="js/theme-init.js"></script>
-  <script type="module" src="js/layout.js"></script>
+  <script type="module" src="js/decks.js"></script>
 </head>
 <body>
 
   <main class="container">
 
-    <section class="card search-card coming-soon">
-      <div class="coming-soon-icon">🃏</div>
-      <h1 class="page-title">Meta-Decks</h1>
-      <p class="page-subtitle">
-        Hier werden bald die beliebtesten und stärksten Decks der Top-Spieler angezeigt –
-        mit Siegquote, Nutzungsrate und durchschnittlichen Elixierkosten.
-      </p>
-      <span class="chip">In Arbeit</span>
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">🃏 Meta-Decks</h1>
+        <p class="page-subtitle" id="metaSubtitle">Die meistgespielten Decks der Top-Spieler</p>
+      </div>
+    </div>
+
+    <section class="card meta-toolbar">
+      <div class="segmented" id="metaSort">
+        <button type="button" data-sort="popular" class="active">🔥 Beliebt</button>
+        <button type="button" data-sort="strong">💪 Stark</button>
+      </div>
+      <input id="cardFilter" class="input input-sm meta-filter" placeholder="Karte suchen, z. B. Hog Rider" autocomplete="off">
     </section>
+
+    <div id="metaNotice"></div>
+    <div id="metaList" class="stack meta-list"></div>
 
   </main>
 

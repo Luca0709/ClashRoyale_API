@@ -1,24 +1,19 @@
+import "./lib/env.js"; // muss zuerst kommen (lädt .env)
+
 import express from "express";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 
-// Lokal: Variablen aus .env laden (Node >= 20.12). Auf Render kommen sie aus dem Dashboard.
-try {
-  process.loadEnvFile();
-} catch {
-  // keine .env vorhanden – ist auf dem Server normal
-}
+import { ApiError, crFetch, normalizeTag } from "./lib/crApi.js";
+import { cached, clearCached } from "./lib/cache.js";
+import { runCollectStep } from "./lib/collector.js";
+import { getMeta } from "./lib/meta.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT || 8080;
-const API_KEY = process.env.CR_API_KEY;
-// Optional: z. B. "https://proxy.royaleapi.dev/v1" für lokale Entwicklung ohne fixe IP
-const API_BASE = process.env.CR_API_BASE || "https://api.clashroyale.com/v1";
-
-if (!API_KEY) {
-  console.warn("⚠️  CR_API_KEY ist nicht gesetzt – API-Anfragen werden fehlschlagen.");
-}
+const COLLECT_SECRET = process.env.COLLECT_SECRET;
 
 const app = express();
 app.use(express.static(path.join(__dirname, "client")));
@@ -27,89 +22,6 @@ app.use(express.static(path.join(__dirname, "client")));
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
 // ---------------------------------------------------------------------------
-
-class ApiError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-
-const ERROR_MESSAGES = {
-  400: "Ungültige Anfrage an die Clash Royale API.",
-  403: "Zugriff verweigert – API-Key oder IP-Freigabe prüfen.",
-  404: "Nicht gefunden.",
-  429: "Zu viele Anfragen – bitte kurz warten.",
-  503: "Die Clash Royale API ist gerade in Wartung."
-};
-
-/** Ruft einen Endpunkt der offiziellen API auf und liefert das JSON zurück. */
-async function crFetch(endpoint) {
-  if (!API_KEY) {
-    throw new ApiError(500, "Der Server hat keinen API-Key konfiguriert.");
-  }
-
-  let response;
-  try {
-    response = await fetch(API_BASE + endpoint, {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        Accept: "application/json"
-      },
-      signal: AbortSignal.timeout(10_000)
-    });
-  } catch {
-    throw new ApiError(504, "Die Clash Royale API antwortet nicht.");
-  }
-
-  if (!response.ok) {
-    const message = ERROR_MESSAGES[response.status] ?? `API-Fehler (${response.status}).`;
-    throw new ApiError(response.status, message);
-  }
-
-  return response.json();
-}
-
-/**
- * Sehr einfacher In-Memory-Cache. Spart API-Aufrufe und macht die Seite
- * auf dem Gratis-Server spürbar schneller.
- */
-const cache = new Map();
-const CACHE_MAX_ENTRIES = 500;
-
-async function cached(key, ttlSeconds, loader) {
-  const hit = cache.get(key);
-  if (hit && hit.expires > Date.now()) {
-    return hit.value;
-  }
-
-  const value = await loader();
-
-  if (cache.size >= CACHE_MAX_ENTRIES) {
-    cache.delete(cache.keys().next().value); // ältesten Eintrag entfernen
-  }
-  cache.set(key, { value, expires: Date.now() + ttlSeconds * 1000 });
-
-  return value;
-}
-
-/**
- * Macht aus "#abc", "abc" oder "ABO" einen gültigen, URL-kodierten Tag.
- * Clash-Royale-Tags bestehen nur aus 0289PYLQGRJCUV – ein "O" ist meist eine Null.
- */
-function normalizeTag(rawTag, what = "Tag") {
-  const tag = String(rawTag ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/^#/, "")
-    .replace(/O/g, "0");
-
-  if (!/^[0289PYLQGRJCUV]{3,14}$/.test(tag)) {
-    throw new ApiError(400, `Ungültiger ${what}. Erlaubt sind nur 0289PYLQGRJCUV.`);
-  }
-
-  return encodeURIComponent(`#${tag}`);
-}
 
 /** Wrapper für Routen: liefert JSON oder eine saubere Fehlermeldung. */
 function route(handler) {
@@ -135,6 +47,12 @@ function notFoundAs(message) {
     }
     throw err;
   };
+}
+
+/** Vergleicht zwei Strings, ohne über die Laufzeit etwas zu verraten. */
+function safeEqual(a, b) {
+  const hash = (value) => crypto.createHash("sha256").update(value).digest();
+  return crypto.timingSafeEqual(hash(a), hash(b));
 }
 
 
@@ -216,6 +134,27 @@ app.get("/api/clans/:tag", route((req) => {
   return cached(`clan:${tag}`, 2 * 60, () =>
     crFetch(`/clans/${tag}`).catch(notFoundAs("Clan nicht gefunden."))
   );
+}));
+
+// Meta-Decks (fertig berechnetes Ergebnis aus der Datenbank)
+app.get("/api/meta", route(() => cached("meta", 60, getMeta)));
+
+// Sammelschritt – wird von einem Cron-Dienst alle ~10 Minuten aufgerufen.
+// ?secret=… ist Pflicht, ?meta=1 erzwingt eine sofortige Neuberechnung.
+app.all("/api/collect", route(async (req) => {
+  if (!COLLECT_SECRET) {
+    throw new ApiError(503, "COLLECT_SECRET ist auf dem Server nicht gesetzt.");
+  }
+
+  const secret = String(req.query.secret ?? req.get("x-collect-secret") ?? "");
+  if (!safeEqual(secret, COLLECT_SECRET)) {
+    throw new ApiError(401, "Falsches Secret.");
+  }
+
+  const result = await runCollectStep({ forceMeta: req.query.meta === "1" });
+  if (result.meta && !result.meta.error) clearCached("meta");
+
+  return result;
 }));
 
 // Unbekannte API-Pfade

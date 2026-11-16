@@ -67,7 +67,7 @@ export function timeAgo(date) {
   return "gerade eben";
 }
 
-/** Einheitliche Lade-, Fehler- und Leer-Hinweise. type: loading | error | empty */
+/** Einheitliche Hinweise. type: loading | error | empty | info */
 export function statusBox(type, message) {
   const spinner = type === "loading" ? `<span class="spinner"></span>` : "";
   return `<div class="status status-${type}">${spinner}${escapeHtml(message)}</div>`;
@@ -90,11 +90,22 @@ export function clanBadgeHtml(clan, className = "badge") {
   return `<img class="${className}" src="${escapeHtml(src)}" alt="" loading="lazy" data-fallback="🛡️">`;
 }
 
-// Bilder mit data-fallback durch ein Icon ersetzen, wenn sie nicht geladen werden können.
+// Bilder, die nicht laden: mit data-fallback-src auf ein Ersatzbild wechseln,
+// mit data-fallback durch ein Icon ersetzen.
 // "error"-Events bubblen nicht, darum lauschen wir in der Capture-Phase.
 document.addEventListener("error", (event) => {
   const img = event.target;
-  if (!(img instanceof HTMLImageElement) || !img.dataset.fallback) return;
+  if (!(img instanceof HTMLImageElement)) return;
+
+  // Ersatzbild vorhanden (z. B. normales statt Evo-Bild) → einmal darauf wechseln
+  if (img.dataset.fallbackSrc) {
+    const src = img.dataset.fallbackSrc;
+    delete img.dataset.fallbackSrc;
+    img.src = src;
+    return;
+  }
+
+  if (!img.dataset.fallback) return;
 
   const placeholder = document.createElement("span");
   placeholder.className = `${img.className} badge-placeholder`;

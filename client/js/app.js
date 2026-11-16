@@ -3,6 +3,7 @@ import {
   escapeHtml, fetchJson, cleanTag, formatNumber, parseCrDate, timeAgo,
   statusBox, clanBadgeHtml
 } from "./utils.js";
+import { deckHtml } from "./cards.js";
 
 const BATTLES_PER_PAGE = 5;
 
@@ -256,55 +257,6 @@ function participantHtml(p) {
       </div>
     </div>
   `;
-}
-
-// Sonderformen im Deck: Evolutionen liegen in Slot 1 oder 3, Helden und Champions in Slot 2 oder 3.
-const EVO_SLOTS = [0, 2];
-const HERO_SLOTS = [1, 2];
-
-const CARD_FORMS = {
-  evo: { badge: "EVO", label: "Evolution" },
-  hero: { badge: "HELD", label: "Held" },
-  champion: { badge: "CHAMP", label: "Champion" }
-};
-
-/**
- * Ermittelt die Form einer Karte im Deck.
- * evolutionLevel 1 = Evolution, 2 = Held, fehlt = normale Karte.
- * Die Slot-Prüfung verhindert, dass eine Karte mit freigeschalteter Evo
- * auf einem normalen Platz fälschlich markiert wird.
- */
-function getCardForm(card, slot) {
-  const level = card.evolutionLevel ?? 0;
-
-  if (card.rarity === "champion") return "champion";
-  if (level === 2 && HERO_SLOTS.includes(slot) && card.iconUrls?.heroMedium) return "hero";
-  if (level >= 1 && EVO_SLOTS.includes(slot) && card.iconUrls?.evolutionMedium) return "evo";
-  return "normal";
-}
-
-function getCardImage(card, form) {
-  if (form === "hero") return card.iconUrls.heroMedium;
-  if (form === "evo") return card.iconUrls.evolutionMedium;
-  return card.iconUrls?.medium ?? "";
-}
-
-function deckHtml(cards, size) {
-  const items = cards.map((card, slot) => {
-    const form = getCardForm(card, slot);
-    const info = CARD_FORMS[form];
-    const title = info ? `${card.name} (${info.label})` : card.name;
-
-    return `
-      <div class="deck-card deck-card-${form}">
-        <img src="${escapeHtml(getCardImage(card, form))}"
-             alt="${escapeHtml(title)}" title="${escapeHtml(title)}" loading="lazy">
-        ${info ? `<span class="card-badge card-badge-${form}">${info.badge}</span>` : ""}
-      </div>
-    `;
-  }).join("");
-
-  return `<div class="deck deck-${size}">${items}</div>`;
 }
 
 function keyValueList(rows) {

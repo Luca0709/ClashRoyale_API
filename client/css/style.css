@@ -572,6 +572,11 @@ img {
   color: var(--muted);
 }
 
+.status-info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
 .spinner {
   width: 16px;
   height: 16px;
@@ -926,6 +931,11 @@ img {
 .deck-lg {
   grid-template-columns: repeat(8, 1fr);
   gap: 10px;
+}
+
+.deck-row {
+  grid-template-columns: repeat(8, 1fr);
+  max-width: 560px;
 }
 
 .result-count {
@@ -1465,21 +1475,96 @@ a.lb-row:last-child {
 
 /* Meta-Decks */
 
-.coming-soon {
+.meta-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+}
+
+.meta-filter {
+  max-width: 280px;
+}
+
+.meta-list {
+  gap: 12px;
+}
+
+.meta-deck {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  transition: border-color var(--transition);
+}
+
+.meta-deck:hover {
+  border-color: var(--border-strong);
+}
+
+.meta-deck-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.meta-deck-head {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 56px 32px;
+  gap: 12px;
 }
 
-.coming-soon .page-subtitle {
-  max-width: 520px;
-  margin-bottom: 12px;
+.meta-rank {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
-.coming-soon-icon {
-  font-size: 48px;
+.meta-deck-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta-deck-side {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  flex-shrink: 0;
+  width: 260px;
+}
+
+.meta-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.meta-stats dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.meta-stats dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
 
@@ -1488,6 +1573,19 @@ a.lb-row:last-child {
 @media (max-width: 900px) {
   .grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .meta-deck {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .meta-deck-side {
+    width: 100%;
+  }
+
+  .meta-stats {
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .deck-lg {
@@ -1592,5 +1690,17 @@ a.lb-row:last-child {
 
   .member-name {
     max-width: 100%;
+  }
+
+  .deck-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .meta-filter {
+    max-width: none;
+  }
+
+  .meta-stats {
+    grid-template-columns: 1fr 1fr;
   }
 }
